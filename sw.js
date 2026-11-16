@@ -1,7 +1,7 @@
 /* Service worker mínimo de "Vida adulta :c".
    Guarda la app (no tus datos) para que abra rápido y sin internet.
    Si cambias index.html, sube el número de VERSION para que se actualice. */
-const VERSION = 'va-v1';
+const VERSION = 'va-v2';
 const ARCHIVOS = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

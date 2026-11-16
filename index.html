@@ -64,6 +64,17 @@
 [data-season="verano"]    { --acc: #B05E48; --acc-ink: #8E4A38; --acc-soft: #F8E6DF; }
 [data-season="otono"]     { --acc: #A5622F; --acc-ink: #844E25; --acc-soft: #F6E7D8; }
 [data-season="cumple"]    { --acc: #9C7430; --acc-ink: #7A5A24; --acc-soft: #F5EBD5; }
+/* Semanas festivas */
+[data-season="reyes"]     { --acc: #8C6A2C; --acc-ink: #6F5320; --acc-soft: #F3EAD6; }
+[data-season="bandera"]   { --acc: #2F6B4F; --acc-ink: #24543E; --acc-soft: #E3EEE7; }
+[data-season="madres"]    { --acc: #A8557A; --acc-ink: #864260; --acc-soft: #F6E3EC; }
+[data-season="patrias"]   { --acc: #9E3D38; --acc-ink: #7E302C; --acc-soft: #F6E2E0; }
+[data-season="muertos"]   { --acc: #B05E1C; --acc-ink: #8C4A16; --acc-soft: #F8E8D6; }
+[data-theme="dark"][data-season="reyes"]     { --acc: #DDBE7C; --acc-ink: #E8CF98; --acc-soft: #4A4031; --on-acc: #2A2110; }
+[data-theme="dark"][data-season="bandera"]   { --acc: #8CC4A6; --acc-ink: #A9D6BD; --acc-soft: #2F443A; --on-acc: #17261F; }
+[data-theme="dark"][data-season="madres"]    { --acc: #EBA8C4; --acc-ink: #F2C2D6; --acc-soft: #4C3340; --on-acc: #2E1824; }
+[data-theme="dark"][data-season="patrias"]   { --acc: #EB9C95; --acc-ink: #F2B8B2; --acc-soft: #4D3230; --on-acc: #2E1513; }
+[data-theme="dark"][data-season="muertos"]   { --acc: #EDA868; --acc-ink: #F3C08E; --acc-soft: #4D3B2A; --on-acc: #2E1A08; }
 [data-theme="dark"][data-season="navidad"]   { --acc: #8CC4A6; --acc-ink: #A9D6BD; --acc-soft: #2F443A; --on-acc: #17261F; }
 [data-theme="dark"][data-season="anio"]      { --acc: #DDBE7C; --acc-ink: #E8CF98; --acc-soft: #4A4031; --on-acc: #2A2110; }
 [data-theme="dark"][data-season="amor"]      { --acc: #E7A9B6; --acc-ink: #F0C0CA; --acc-soft: #4C3338; --on-acc: #2E1A1F; }
@@ -220,6 +231,9 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--t
 .scene img.mine { max-height: 150px; object-fit: contain; margin-left: auto; width: auto; max-width: 100%; filter: drop-shadow(0 6px 10px rgba(0,0,0,.12)); }
 .lights { position: absolute; left: 0; right: 0; top: 0; height: 34px; z-index: 2; pointer-events: none; }
 .fx { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.picado { position: absolute; left: 10px; right: 10px; top: 0; height: 34px; z-index: 2; pointer-events: none; display: flex; justify-content: space-between; border-top: 1.5px solid rgba(140, 122, 102, .55); }
+.picado svg { width: 24px; height: 30px; flex: none; transform-origin: 50% 0; animation: sway 4.5s ease-in-out infinite; }
+@media (min-width: 640px) { .picado svg { width: 28px; height: 34px; } }
 .fx i { position: absolute; top: -12px; display: block; will-change: transform, opacity; }
 @media (min-width: 640px) { .hero { min-height: 190px; padding: var(--s6) var(--s5) var(--s5); } .hero-text h1 { font-size: 32px; } }
 
@@ -230,6 +244,9 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--t
 @keyframes rise { 0% { transform: translate3d(0, 200px, 0) scale(.8); opacity: 0; } 15% { opacity: var(--o, .7); } 100% { transform: translate3d(var(--dx, 10px), -20px, 0) scale(1); opacity: 0; } }
 @keyframes wag { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(14deg); } }
 @keyframes breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+@keyframes sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes wave { 0%, 100% { transform: skewY(0deg) scaleX(1); } 50% { transform: skewY(-3deg) scaleX(.97); } }
+.flag { transform-box: fill-box; transform-origin: 0% 50%; animation: wave 3.8s ease-in-out infinite; }
 @keyframes up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .bulb { animation: twinkle 3.6s ease-in-out infinite; }
 .star { transform-box: fill-box; transform-origin: center; animation: glow 4s ease-in-out infinite; }
@@ -485,6 +502,9 @@ function temporadaActual() {
   const md = h.slice(5);
   const cumple = S.data && S.data.config && S.data.config.cumple;
   if (cumple && md === cumple) return 'cumple';
+  // Semanas festivas: mandan sobre la temporada del mes, solo esos días
+  const festiva = FESTIVOS.find(f => md >= f.desde && md <= f.hasta);
+  if (festiva) return festiva.t;
   const m = +h.slice(5, 7);
   if (m === 11 || m === 12) return 'navidad';
   if (m === 1) return 'anio';
@@ -493,8 +513,22 @@ function temporadaActual() {
   if (m <= 8) return 'verano';
   return 'otono';
 }
-const TEMPORADAS = { auto: 'Automática', navidad: 'Navidad', anio: 'Año nuevo', amor: 'Amor y amistad', primavera: 'Primavera', verano: 'Verano', otono: 'Otoño', cumple: 'Cumpleaños' };
+// Fechas festivas de México (mes-día, inclusive)
+const FESTIVOS = [
+  { t: 'reyes', desde: '01-05', hasta: '01-06' },
+  { t: 'bandera', desde: '02-21', hasta: '02-24' },
+  { t: 'madres', desde: '05-08', hasta: '05-10' },
+  { t: 'patrias', desde: '09-13', hasta: '09-16' },
+  { t: 'muertos', desde: '10-28', hasta: '11-02' }
+];
+const TEMPORADAS = {
+  auto: 'Automática', navidad: 'Navidad', anio: 'Año nuevo', amor: 'Amor y amistad', primavera: 'Primavera', verano: 'Verano', otono: 'Otoño', cumple: 'Cumpleaños',
+  reyes: 'Día de Reyes (5–6 ene)', bandera: 'Día de la Bandera (21–24 feb)', madres: 'Día de las Madres (8–10 may)', patrias: 'Fiestas Patrias (13–16 sep)', muertos: 'Día de Muertos (28 oct–2 nov)'
+};
 const FRASES = {
+  reyes: 'Día de Reyes: que la rosca te traiga ahorros.', bandera: 'Día de la Bandera: orgullo verde, blanco y rojo.',
+  madres: 'Feliz Día de las Madres: celebra a quien te cuida.', patrias: '¡Viva México! Celebra con la cartera en orden.',
+  muertos: 'Día de Muertos: recordar con amor, gastar con calma.',
   navidad: 'Temporada de luces: que tus cuentas también brillen.', anio: 'Año nuevo, cuentas claras.', amor: 'Quiérete también en tus finanzas.',
   primavera: 'Que florezcan tus ahorros.', verano: 'Disfruta, con la cartera tranquila.', otono: 'Tiempo de cosechar lo ahorrado.', cumple: 'Hoy todo es fiesta. Consiéntete bonito.'
 };
@@ -515,8 +549,14 @@ function perrito(acc) {
     amor: `<path d="M84 100s-10-6-10-13a5 5 0 0 1 10-1.5A5 5 0 0 1 94 87c0 7-10 13-10 13z" fill="#D9798C"/>`,
     primavera: `<g>${[38, 50, 62, 74, 86].map((x, i) => `<circle cx="${x}" cy="${30 + Math.abs(2 - i) * 2}" r="5" fill="${['#E8A6B4', '#F3D27A', '#B9A6D3', '#F3D27A', '#E8A6B4'][i]}"/><circle cx="${x}" cy="${30 + Math.abs(2 - i) * 2}" r="1.8" fill="#FFF8EF"/>`).join('')}</g>`,
     verano: `<g><rect x="42" y="44" width="15" height="10" rx="4" fill="#2E2A26"/><rect x="63" y="44" width="15" height="10" rx="4" fill="#2E2A26"/><path d="M57 48h6" stroke="#2E2A26" stroke-width="2"/></g>`,
-    otono: `<path d="M40 70 q20 12 40 0 l2 7 q-22 12 -44 0 Z" fill="#B8723A"/><path d="M70 76 l6 16 l7 -3 l-5 -14z" fill="#A5622F"/>`
+    otono: `<path d="M40 70 q20 12 40 0 l2 7 q-22 12 -44 0 Z" fill="#B8723A"/><path d="M70 76 l6 16 l7 -3 l-5 -14z" fill="#A5622F"/>`,
+    reyes: `<g><path d="M40 33 L43 13 L52 25 L60 8 L68 25 L77 13 L80 33 Z" fill="#E3C88C" stroke="#B8924A" stroke-width="1.4" stroke-linejoin="round"/><circle cx="60" cy="9" r="2.8" fill="#C27C88"/><circle cx="43" cy="13" r="2.3" fill="#6C8EAD"/><circle cx="77" cy="13" r="2.3" fill="#5B8A72"/><rect x="40" y="29" width="40" height="4" rx="2" fill="#B8924A"/></g>`,
+    muertos: `<g>${[38, 49, 60, 71, 82].map((x, i) => { const y = 30 + Math.abs(2 - i) * 2; const c = ['#E8892B', '#F3B13A', '#C2558A', '#F3B13A', '#E8892B'][i]; return [0, 60, 120, 180, 240, 300].map(a => `<circle cx="${x + Math.cos(a * Math.PI / 180) * 3.4}" cy="${y + Math.sin(a * Math.PI / 180) * 3.4}" r="3" fill="${c}"/>`).join('') + `<circle cx="${x}" cy="${y}" r="2.4" fill="#B5631A"/>`; }).join('')}</g>`,
+    bandera: `<g><path d="M44 73 L76 73 L60 94 Z" fill="#FFF8EF"/><path d="M44 73 L54.7 73 L54.7 87 Z" fill="#3B7A57"/><path d="M76 73 L65.3 73 L65.3 87 Z" fill="#B4433E"/></g>`,
+    madres: `<g transform="translate(78 84)"><path d="M6 22 L4 6 M6 22 L10 5 M6 22 L14 9" stroke="#7BA383" stroke-width="2" fill="none"/>${[[4, 5, '#E8A6B4'], [10, 3, '#F3D27A'], [15, 8, '#C27C88']].map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="4.2" fill="${c}"/><circle cx="${x}" cy="${y}" r="1.5" fill="#FFF8EF"/>`).join('')}<path d="M2 20 h9 l-2 5 h-5 z" fill="#E3C88C"/></g>`
   };
+  extras.patrias = extras.bandera;
+  const CUERPO = ['amor', 'otono', 'bandera', 'patrias', 'madres']; // accesorios que van en el cuerpo, no en la cabeza
   const ojos = acc === 'verano' ? '' : `<circle cx="51" cy="50" r="2.7" fill="#3A2E26"/><circle cx="69" cy="50" r="2.7" fill="#3A2E26"/><circle cx="52" cy="49" r=".9" fill="#fff"/><circle cx="70" cy="49" r=".9" fill="#fff"/>`;
   return `<g class="pup">
     <ellipse cx="60" cy="110" rx="30" ry="4.5" fill="rgba(60,40,20,.10)"/>
@@ -534,15 +574,36 @@ function perrito(acc) {
       <ellipse cx="60" cy="57" rx="3.6" ry="2.7" fill="#3A2E26"/>
       <path d="M57 61.5 q3 3 6 0" stroke="#3A2E26" stroke-width="1.4" fill="none" stroke-linecap="round"/>
       <ellipse cx="45" cy="58" rx="3.6" ry="2.1" fill="#E8A6A6" opacity=".55"/><ellipse cx="75" cy="58" rx="3.6" ry="2.1" fill="#E8A6A6" opacity=".55"/>
-      ${extras[acc] && acc !== 'amor' && acc !== 'otono' ? extras[acc] : ''}
+      ${extras[acc] && !CUERPO.includes(acc) ? extras[acc] : ''}
     </g>
     <path d="M44 73 q16 8 32 0" stroke="#B4505A" stroke-width="4" fill="none" stroke-linecap="round"/>
     <circle cx="60" cy="79" r="3.2" fill="#D8B872"/>
-    ${acc === 'amor' || acc === 'otono' ? extras[acc] : ''}
+    ${CUERPO.includes(acc) ? extras[acc] : ''}
   </g>`;
 }
 function escena(t) {
+  const BANDERA = `<rect x="-1.5" y="0" width="3" height="128" rx="1.5" fill="#8A7A66"/><circle cx="0" cy="0" r="3.5" fill="#D8B872"/>
+    <g class="flag"><rect x="1.5" y="6" width="22" height="44" fill="#3B7A57"/><rect x="23.5" y="6" width="22" height="44" fill="#FFF8EF"/><rect x="45.5" y="6" width="22" height="44" fill="#B4433E"/>
+    <rect x="1.5" y="6" width="66" height="44" fill="none" stroke="rgba(60,40,20,.15)"/><circle cx="34.5" cy="27" r="6" fill="none" stroke="#9C7A4A" stroke-width="2"/><path d="M30.5 30 q4 3 8 0" stroke="#5B8A72" stroke-width="1.6" fill="none"/></g>
+    <path d="M-14 128 h28" stroke="#8A7A66" stroke-width="4" stroke-linecap="round"/>`;
+  const flor = (x, y, r) => [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(a => `<circle cx="${(x + Math.cos(a * Math.PI / 180) * r * .7).toFixed(1)}" cy="${(y + Math.sin(a * Math.PI / 180) * r * .7).toFixed(1)}" r="${(r * .42).toFixed(1)}" fill="#E8892B"/>`).join('')
+    + [0, 60, 120, 180, 240, 300].map(a => `<circle cx="${(x + Math.cos(a * Math.PI / 180) * r * .35).toFixed(1)}" cy="${(y + Math.sin(a * Math.PI / 180) * r * .35).toFixed(1)}" r="${(r * .34).toFixed(1)}" fill="#F3B13A"/>`).join('') + `<circle cx="${x}" cy="${y}" r="${(r * .22).toFixed(1)}" fill="#B5631A"/>`;
+  const florPetalos = (x, y, c) => [0, 72, 144, 216, 288].map(a => `<ellipse cx="${x}" cy="${y}" rx="4.5" ry="8" transform="rotate(${a} ${x} ${y}) translate(0 -7)" fill="${c}"/>`).join('') + `<circle cx="${x}" cy="${y}" r="4" fill="#F3E3BD"/>`;
+  const destello = (x, y, c, s, d) => `<path class="star" style="animation-delay:-${d}s" transform="translate(${x} ${y}) scale(${s})" d="M0 -10 L2.5 -2.5 L10 0 L2.5 2.5 L0 10 L-2.5 2.5 L-10 0 L-2.5 -2.5 Z" fill="${c}"/>`;
   const props = {
+    reyes: `<g transform="translate(150 80)"><ellipse cx="48" cy="36" rx="40" ry="16" fill="none" stroke="#C98E52" stroke-width="18"/><ellipse cx="48" cy="32" rx="40" ry="16" fill="none" stroke="#E2AE6F" stroke-width="16"/>
+      ${[0, 40, 80, 120, 160, 200, 240, 280, 320].map((a, i) => { const x = 48 + 40 * Math.cos(a * Math.PI / 180), y = 32 + 16 * Math.sin(a * Math.PI / 180); return `<rect x="${(x - 5).toFixed(1)}" y="${(y - 2.5).toFixed(1)}" width="10" height="5" rx="2.5" transform="rotate(${(a + 90) % 180} ${x.toFixed(1)} ${y.toFixed(1)})" fill="${['#C2453F', '#5B8A72', '#F3B13A', '#FFF8EF'][i % 4]}"/>`; }).join('')}
+      </g>${destello(205, 50, '#D8B872', 1, 0)}${destello(238, 70, '#E3C88C', .6, 1.4)}`,
+    bandera: `<g transform="translate(166 12)">${BANDERA}</g>`,
+    patrias: `<g transform="translate(176 34) scale(.82)">${BANDERA}</g>${destello(160, 30, '#3B7A57', .9, 0)}${destello(236, 26, '#B4433E', .8, 1.2)}${destello(240, 70, '#D8B872', .6, 2.1)}`,
+    muertos: `<g transform="translate(122 0)">
+      <rect x="92" y="80" width="12" height="34" rx="3" fill="#FFF3DC"/><path class="star" d="M98 70 q6 8 0 12 q-6 -4 0 -12z" fill="#F3B13A"/>
+      <rect x="44" y="90" width="12" height="26" rx="3" fill="#FFF3DC"/><path class="star" style="animation-delay:-1.5s" d="M50 80 q6 8 0 12 q-6 -4 0 -12z" fill="#F3B13A"/>
+      ${[[30, 120, 13], [62, 128, 11], [86, 118, 14], [112, 128, 12], [14, 132, 9]].map(([x, y, r]) => flor(x, y, r)).join('')}</g>`,
+    madres: `<g transform="translate(160 26)"><path d="M40 110 L28 50 M40 110 L44 42 M40 110 L60 54 M40 110 L16 64 M40 110 L70 72" stroke="#7BA383" stroke-width="2.5" fill="none"/>
+      ${[[28, 50, '#E8A6B4'], [44, 42, '#F3D27A'], [60, 54, '#C27C88'], [16, 64, '#B9A6D3'], [70, 72, '#E8A6B4']].map(([x, y, c]) => florPetalos(x, y, c)).join('')}
+      <path d="M24 96 h32 l-6 24 h-20 z" fill="#E3C88C"/><path d="M28 101 q12 7 24 0" stroke="#C27C88" stroke-width="3" fill="none"/></g>
+      <path class="star" transform="translate(214 20) scale(.55)" d="M18 32S0 22 0 10a9 9 0 0 1 18-3 9 9 0 0 1 18 3c0 12-18 22-18 22z" fill="#D9798C"/>`,
     navidad: `<g transform="translate(118 0)">
       <rect x="44" y="124" width="12" height="18" rx="2" fill="#8A6A4F"/>
       <path d="M50 52 L80 96 H20 Z" fill="#2F6B4F" stroke="#2F6B4F" stroke-width="7" stroke-linejoin="round"/>
@@ -579,8 +640,23 @@ function lucesHTML() {
   }
   return `<svg class="lights" viewBox="0 0 400 34" preserveAspectRatio="none" aria-hidden="true"><path d="M0 4 Q32 26 66 6 T133 6 T200 6 T266 6 T333 6 T400 6" fill="none" stroke="#8C7A66" stroke-width="1.2" opacity=".55"/>${bulbs}</svg>`;
 }
+function papelPicado(t) {
+  // Banderitas de papel picado colgando de un hilo (Fiestas Patrias y Día de Muertos)
+  const col = t === 'muertos' ? ['#C2558A', '#E8892B', '#8E7CB0', '#F3B13A', '#4E9A9A'] : ['#3B7A57', '#FFF8EF', '#B4433E'];
+  let h = '';
+  for (let i = 0; i < 11; i++) {
+    h += `<svg viewBox="0 0 28 34" style="animation-delay:-${((i * 0.63) % 4.5).toFixed(2)}s"><path fill-rule="evenodd" d="M2 0 H26 V26 L23 30 L20 26 L17 30 L14 26 L11 30 L8 26 L5 30 L2 26 Z M14 6 a4 4 0 1 0 .01 0 Z M7 15 a2.2 2.2 0 1 0 .01 0 Z M21 15 a2.2 2.2 0 1 0 .01 0 Z M14 16 l3 3 -3 3 -3 -3 Z" fill="${col[i % col.length]}" stroke="rgba(60,40,20,.18)" stroke-width=".8"/></svg>`;
+  }
+  return `<div class="picado" aria-hidden="true">${h}</div>`;
+}
 function particulas(t) {
+  const confeti = (n, cols) => ({ n, k: 'fall', f: i => `<svg width="7" height="10" viewBox="0 0 7 10"><rect width="7" height="10" rx="2" fill="${cols[i % cols.length]}"/></svg>` });
   const tipos = {
+    reyes: confeti(12, ['#D8B872', '#E3C88C', '#C2453F', '#5B8A72']),
+    bandera: confeti(10, ['#3B7A57', '#FFFFFF', '#B4433E']),
+    patrias: confeti(16, ['#3B7A57', '#FFFFFF', '#B4433E', '#D8B872']),
+    muertos: { n: 11, k: 'fall', f: i => `<svg width="9" height="7" viewBox="0 0 9 7"><ellipse cx="4.5" cy="3.5" rx="4.5" ry="3.5" fill="${['#E8892B', '#F3B13A'][i % 2]}"/></svg>` },
+    madres: { n: 10, k: 'fall', f: i => `<svg width="10" height="7" viewBox="0 0 10 7"><ellipse cx="5" cy="3.5" rx="5" ry="3.5" fill="${['#F0BFCB', '#E8A6B4', '#F3D27A'][i % 3]}"/></svg>` },
     navidad: { n: 14, k: 'fall', f: () => `<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="#FFFFFF" opacity=".95"/></svg>` },
     anio: { n: 14, k: 'fall', f: i => `<svg width="7" height="10" viewBox="0 0 7 10"><rect width="7" height="10" rx="2" fill="${['#D8B872', '#E3C88C', '#C27C88', '#9CC7A9'][i % 4]}"/></svg>` },
     cumple: { n: 18, k: 'fall', f: i => `<svg width="7" height="10" viewBox="0 0 7 10"><rect width="7" height="10" rx="2" fill="${['#D8B872', '#E8A6B4', '#B9A6D3', '#9CC7A9'][i % 4]}"/></svg>` },
@@ -831,7 +907,7 @@ function vistaInicio() {
   const hoy = D().hoy || hoyISO();
   const saludo = t === 'cumple' ? `¡Feliz cumpleaños${cfg.nombre ? ', ' + esc(cfg.nombre) : ''}!` : `Hola${cfg.nombre ? ', ' + esc(cfg.nombre) : ''}`;
   const hero = `<section class="hero span-3" aria-label="Saludo">
-      ${t === 'navidad' ? lucesHTML() : ''}${particulas(t)}
+      ${t === 'navidad' ? lucesHTML() : (t === 'patrias' || t === 'muertos') ? papelPicado(t) : ''}${particulas(t)}
       <div class="hero-text"><div class="when">${esc(diaTxt(hoy))}</div><h1>${saludo}</h1><p>${esc(FRASES[t])}</p></div>
       <div class="scene">${escena(t)}</div>
     </section>`;
