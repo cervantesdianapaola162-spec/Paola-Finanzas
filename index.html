@@ -503,7 +503,8 @@ const I = {
   msi: '<rect x="3" y="5" width="18" height="15" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4M8 14h2M12 14h2M16 14h.5"/>',
   rep: '<path d="M4 9a8 8 0 0 1 14-3l2 2M20 15a8 8 0 0 1-14 3l-2-2M20 4v4h-4M4 20v-4h4"/>',
   goal: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".9"/>',
-  tag: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8" r="1.3"/>', chev: '<path d="m9.5 6 6 6-6 6"/>'
+  tag: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8" r="1.3"/>', chev: '<path d="m9.5 6 6 6-6 6"/>',
+  due: '<rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M9 3v4M15 3v4"/><path d="M12 13v3l2 1"/>'
 };
 const ic = (n, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
 
@@ -961,6 +962,8 @@ function vistaInicio() {
     if (a.tipo === 'presupuesto-excedido') return a.pct > 1.0001
       ? `<div class="alert bad">💸<div>Te pasaste del presupuesto de <b>${esc(a.categoria)}</b> (${pct(a.pct)}).</div></div>`
       : `<div class="alert warn">🎯<div>Llegaste justo al tope de <b>${esc(a.categoria)}</b> (100%).</div></div>`;
+    if (a.tipo === 'pendiente-pronto') return `<div class="alert warn">🧾<div><b>${esc(a.descripcion)}</b>: te faltan ${fm(a.monto)} y vence ${a.dias === 0 ? 'hoy' : 'en ' + a.dias + ' día' + (a.dias > 1 ? 's' : '')} (${fecha(a.fecha)}).</div></div>`;
+    if (a.tipo === 'pendiente-vencido') return `<div class="alert bad">🧾<div><b>${esc(a.descripcion)}</b> ya venció (${fecha(a.fecha)}). Te faltan ${fm(a.monto)}.</div></div>`;
     if (a.tipo === 'presupuesto-alerta') return `<div class="alert warn">🔔<div>Llevas ${pct(a.pct)} del presupuesto de <b>${esc(a.categoria)}</b>.</div></div>`;
     return '';
   }).join('');
@@ -997,6 +1000,11 @@ function vistaInicio() {
       <div class="chart-box"><canvas id="ch-bars" aria-label="Gráfica de barras de los últimos 12 meses"></canvas></div>
     </section>
     <section class="card" aria-label="Cuentas"><div class="card-h"><h2 class="sec">Tus cuentas</h2><button class="btn ghost" data-go2="tarjetas">Ver todo</button></div>${mini || '<p class="faint">Sin cuentas.</p>'}</section>
+    ${d.porPagar && d.porPagar.cuantos ? `<section class="card" aria-label="Por pagar"><div class="card-h"><h2 class="sec">Por pagar</h2><button class="btn ghost" data-ir="porpagar">Ver</button></div>
+      <div class="label">Te falta pagar</div><div class="mid num" style="margin-top:2px">${fm(d.porPagar.falta)}</div>
+      <small class="faint">${d.porPagar.cuantos} pendiente${d.porPagar.cuantos > 1 ? 's' : ''} · no se resta de "Me queda" hasta que abones</small>
+      ${d.porPagar.proximo ? `<div class="mini-acc" style="margin-top:10px;border-top:1px solid var(--bd);border-bottom:0"><div class="ico">🧾</div><div style="flex:1;min-width:0"><b style="font-weight:500">${esc(d.porPagar.proximo.descripcion)}</b><br><small class="faint">Vence el ${fecha(d.porPagar.proximo.fecha)}</small></div><b class="num">${fm(d.porPagar.proximo.falta)}</b></div>` : ''}
+    </section>` : ''}
     <section class="card" aria-label="Presupuestos"><div class="card-h"><h2 class="sec">Presupuestos</h2></div><div class="stack">${pres}</div></section>
     <section class="card" aria-label="Indicadores"><div class="card-h"><h2 class="sec">Indicadores</h2></div>
       <div class="ind">
@@ -1246,6 +1254,7 @@ function bindTarjetas() {
 // ---------- Más ----------
 function vistaMas() {
   const atras = `<button class="icon-btn" data-back aria-label="Regresar">${ic('left')}</button>`;
+  if (S.sub === 'porpagar') return vistaPorPagar(atras);
   if (S.sub === 'msi') return vistaMsi(atras);
   if (S.sub === 'recurrentes') return vistaRecurrentes(atras);
   if (S.sub === 'metas') return vistaMetas(atras);
@@ -1253,6 +1262,7 @@ function vistaMas() {
   if (S.sub === 'config') return vistaConfig(atras);
   const item = (k, i, t, s) => `<button data-sub="${k}"><div class="ico">${ic(i)}</div><div class="t"><b>${t}</b><small>${s}</small></div>${ic('chev', 'chev')}</button>`;
   return `<div class="topbar"><h1>Más</h1></div><div class="anim-in"><div class="menu">
+    ${item('porpagar', 'due', 'Por pagar', 'Lo que debes y su fecha límite')}
     ${item('msi', 'msi', 'Meses sin intereses', 'Compras a MSI y cuánto falta')}
     ${item('recurrentes', 'rep', 'Recurrentes', 'Sueldo, Spotify y lo que se repite')}
     ${item('metas', 'goal', 'Metas de ahorro', 'Tus sueños con barra de progreso')}
@@ -1264,11 +1274,86 @@ function bindMas() {
   $$('[data-sub]').forEach(b => b.onclick = () => { S.sub = b.dataset.sub; render(); scrollTo({ top: 0 }); });
   $$('[data-back]').forEach(b => b.onclick = () => { S.sub = null; render(); });
   requestAnimationFrame(() => $$('.bar i[data-w]').forEach(i => i.style.width = i.dataset.w + '%'));
+  if (S.sub === 'porpagar') bindPorPagar();
   if (S.sub === 'msi') bindMsi();
   if (S.sub === 'recurrentes') bindRecurrentes();
   if (S.sub === 'metas') bindMetas();
   if (S.sub === 'categorias') bindCategorias();
   if (S.sub === 'config') bindConfig();
+}
+
+// Por pagar (pendientes): no restan dinero hasta que abonas
+function cuandoTxt(p) {
+  if (p.dias === null || p.dias === undefined) return 'Sin fecha límite';
+  if (p.dias < 0) return `Venció el ${fecha(p.fecha)}`;
+  if (p.dias === 0) return 'Vence hoy';
+  return `Vence el ${fecha(p.fecha)} · en ${p.dias} día${p.dias === 1 ? '' : 's'}`;
+}
+function vistaPorPagar(atras) {
+  const l = D().pendientes || [];
+  const act = l.filter(p => p.estado !== 'Pagado'), pag = l.filter(p => p.estado === 'Pagado');
+  const falta = act.reduce((s, p) => s + (p.falta || 0), 0);
+  const card = p => `<div class="card">
+      <div class="row between" style="align-items:flex-start"><div style="min-width:0"><b class="serif" style="font-size:18px;font-weight:500">${esc(p.descripcion)}</b>${p.acreedor ? `<br><small class="faint">A: ${esc(p.acreedor)}</small>` : ''}</div>
+      <span class="chip ${p.estado === 'Pagado' ? 'ok' : p.alerta === 'vencido' ? 'bad' : p.alerta === 'pronto' ? 'warn' : 'gold'}">${p.estado === 'Pagado' ? 'Pagado ✓' : p.alerta === 'vencido' ? 'Vencido' : p.alerta === 'pronto' ? 'Pronto' : 'Pendiente'}</span></div>
+      <div class="row between" style="margin-top:10px;align-items:baseline"><span class="mid num">${fm(p.falta)}</span><small class="faint num">de ${fm(p.total)}</small></div>
+      <div class="bar ${p.estado === 'Pagado' ? 'ok' : ''}" style="margin:8px 0 6px"><i data-w="${(p.avance || 0) * 100}"></i></div>
+      <small class="faint" style="display:block">${p.estado === 'Pagado' ? 'Ya quedó pagado' : esc(cuandoTxt(p))}</small>
+      ${p.porMes ? `<small class="muted" style="display:block;margin-top:2px">Para llegar a tiempo: ≈ <b class="num">${fm(p.porMes)}</b> al mes o <b class="num">${fm(p.porQuincena)}</b> por quincena</small>` : ''}
+      ${p.notas ? `<small class="faint" style="display:block;margin-top:4px">📝 ${esc(p.notas)}</small>` : ''}
+      <div class="row" style="margin-top:12px">${p.estado !== 'Pagado' ? `<button class="btn primary" style="flex:1" data-abono="${esc(p.id)}">Abonar</button>` : ''}<button class="btn" ${p.estado === 'Pagado' ? 'style="flex:1"' : ''} data-pen="${esc(p.id)}" aria-label="Editar">${ic('edit')}${p.estado === 'Pagado' ? ' Editar' : ''}</button></div>
+    </div>`;
+  return `<div class="topbar"><div class="row">${atras}<h1>Por pagar</h1></div><button class="btn" id="pp-add">${ic('plus')} Agregar</button></div>
+    <p class="muted" style="margin-top:-6px;font-size:14px">Aquí anotas lo que debes. <b>No te resta dinero</b> hasta que abonas: cada abono se registra como gasto de la cuenta que elijas.</p>
+    ${act.length ? `<div class="card kpi hero-kpi" style="margin-bottom:12px"><div class="label">Te falta pagar</div><div class="big num">${fm(falta)}</div><div class="sub faint">${act.length} pendiente${act.length > 1 ? 's' : ''}</div></div>` : ''}
+    <div class="grid anim-in">${act.map(card).join('') || `<div class="card empty span-3"><span class="em">🧾</span><b>No debes nada</b><p style="margin:4px 0 12px">Agrega lo que tengas que pagar más adelante, con su fecha límite.</p><button class="btn primary" id="pp-add2">Agregar pendiente</button></div>`}</div>
+    ${pag.length ? `<h2 class="sec" style="margin:24px 0 12px">Ya pagados</h2><div class="grid">${pag.map(card).join('')}</div>` : ''}`;
+}
+function bindPorPagar() {
+  const form = p => {
+    p = Object.assign({ categoria: 'Otros', pagado: 0 }, p || {});
+    abrirCapa(`<div class="sheet-h"><h2>${p.id ? 'Editar pendiente' : 'Nuevo pendiente'}</h2><button class="icon-btn" data-close aria-label="Cerrar">${ic('x')}</button></div>
+      <label class="field"><span>¿Qué debes?</span><input class="input" id="pp-d" maxlength="80" placeholder="Préstamo, colegiatura, regalo…" value="${esc(p.descripcion || '')}"></label>
+      <label class="field"><span>¿A quién? (opcional)</span><input class="input" id="pp-a" maxlength="60" value="${esc(p.acreedor || '')}"></label>
+      <div class="row" style="gap:10px"><label class="field" style="flex:1"><span>Monto total</span><input class="input num" id="pp-t" inputmode="decimal" value="${esc(p.total || '')}"></label><label class="field" style="flex:1"><span>Ya pagado</span><input class="input num" id="pp-p" inputmode="decimal" value="${esc(p.pagado || 0)}"></label></div>
+      <label class="field"><span>Fecha límite (puedes pagar hasta…)</span><input class="input" id="pp-f" type="date" value="${esc(p.fecha || '')}"></label>
+      <label class="field"><span>Categoría cuando abones</span><select class="input" id="pp-k">${catsDe('Gasto').map(c => `<option ${c.nombre === p.categoria ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('')}</select></label>
+      <label class="field"><span>Notas (opcional)</span><input class="input" id="pp-n" maxlength="120" value="${esc(p.notas || '')}"></label>
+      <p class="faint" style="font-size:13px;margin-top:-6px">"Ya pagado" solo sirve para lo que pagaste antes de usar la app: no crea movimientos.</p>
+      <div class="err" id="pp-e"></div>
+      <div class="row">${p.id ? `<button class="btn danger" id="pp-del">${ic('trash')}</button>` : ''}<button class="btn primary" style="flex:1" id="pp-ok">Guardar</button></div>`, 'modal');
+    $('#pp-ok').onclick = async () => {
+      const item = { id: p.id, descripcion: $('#pp-d').value.trim(), acreedor: $('#pp-a').value.trim(), total: Number($('#pp-t').value.replace(/,/g, '')), pagado: Number(($('#pp-p').value || '0').replace(/,/g, '')), fecha: $('#pp-f').value, categoria: $('#pp-k').value, notas: $('#pp-n').value.trim() };
+      if (!item.descripcion) { $('#pp-e').textContent = 'Escribe qué debes'; return; }
+      if (!(item.total > 0)) { $('#pp-e').textContent = 'Escribe el monto total'; return; }
+      try { await api('pendientes', { op: 'guardar', item }); cerrarCapa(); toast('Guardado ✓'); sync(true); } catch (e) { $('#pp-e').textContent = amable(e); }
+    };
+    $('#pp-del') && ($('#pp-del').onclick = () => confirmar('¿Eliminar este pendiente?', 'Los abonos que ya registraste se quedan en tus movimientos.', 'Eliminar', async () => { try { await api('pendientes', { op: 'eliminar', id: p.id }); toast('Eliminado'); sync(true); } catch (e) { toast(amable(e), true); } }));
+  };
+  $('#pp-add').onclick = () => form(); $('#pp-add2') && ($('#pp-add2').onclick = () => form());
+  $$('[data-pen]').forEach(b => b.onclick = () => form(Object.assign({}, (D().pendientes || []).find(p => p.id === b.dataset.pen))));
+  $$('[data-abono]').forEach(b => b.onclick = () => {
+    const p = (D().pendientes || []).find(x => x.id === b.dataset.abono);
+    const ult = store.get('ultimaCuenta', (cuentas().find(c => c.tipo !== 'Crédito') || {}).nombre);
+    abrirCapa(`<div class="sheet-h"><h2>Abonar</h2><button class="icon-btn" data-close aria-label="Cerrar">${ic('x')}</button></div>
+      <p class="muted" style="margin-top:0">${esc(p.descripcion)} · te faltan <b class="num">${fm(p.falta)}</b></p>
+      <div class="chips" style="margin-bottom:14px">${p.porQuincena && p.porQuincena < p.falta ? `<button type="button" data-sug="${p.porQuincena}">Quincena ${fm(p.porQuincena)}</button>` : ''}${p.porMes && p.porMes < p.falta ? `<button type="button" data-sug="${p.porMes}">Mes ${fm(p.porMes)}</button>` : ''}<button type="button" data-sug="${p.falta}">Todo ${fm(p.falta)}</button></div>
+      <label class="field"><span>¿Cuánto abonas?</span><input class="input num" id="ab2-v" inputmode="decimal" placeholder="0.00"></label>
+      <div class="row" style="gap:10px"><label class="field" style="flex:1.3"><span>De qué cuenta</span><select class="input" id="ab2-c">${cuentas().map(c => `<option ${c.nombre === ult ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('')}</select></label><label class="field" style="flex:1"><span>Fecha</span><input class="input" id="ab2-f" type="date" value="${hoyISO()}"></label></div>
+      <label class="row" style="margin-bottom:12px;min-height:44px;font-size:14px"><input type="checkbox" id="ab2-r" checked style="width:20px;height:20px;accent-color:var(--acc)"> Registrar como gasto (resta de la cuenta)</label>
+      <div class="err" id="ab2-e"></div><button class="btn primary block" id="ab2-ok">Abonar</button>`, 'modal');
+    $$('[data-sug]').forEach(x => x.onclick = () => { $('#ab2-v').value = x.dataset.sug; $$('[data-sug]').forEach(y => y.setAttribute('aria-pressed', y === x)); });
+    $('#ab2-ok').onclick = async () => {
+      const v = Number(($('#ab2-v').value || '').replace(/,/g, ''));
+      if (!(v > 0)) { $('#ab2-e').textContent = 'Escribe cuánto abonas'; return; }
+      if (v > p.falta + 0.001) { $('#ab2-e').textContent = 'Es más de lo que te falta'; return; }
+      $('#ab2-ok').disabled = true;
+      try {
+        const r = await api('abonarPendiente', { id: p.id, monto: v, cuenta: $('#ab2-c').value, fecha: $('#ab2-f').value, registrar: $('#ab2-r').checked });
+        store.set('ultimaCuenta', $('#ab2-c').value); cerrarCapa(); toast(r.estado === 'Pagado' ? '¡Pagado por completo! 🎉' : 'Abono registrado ✓'); sync(true);
+      } catch (e) { $('#ab2-e').textContent = amable(e); $('#ab2-ok').disabled = false; }
+    };
+  });
 }
 
 // MSI
