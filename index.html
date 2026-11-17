@@ -1031,7 +1031,7 @@ function graficas() {
     S.charts.donut = new Chart(cv, {
       type: 'doughnut',
       data: { labels: top.map(c => c.categoria).concat(resto ? ['Otras'] : []), datasets: [{ data: top.map(c => c.monto).concat(resto ? [resto] : []), backgroundColor: top.map((c, i) => colorRango(i)).concat(resto ? [css('--bd-2')] : []), borderColor: card, borderWidth: 3, borderRadius: 6, hoverOffset: 6 }] },
-      options: { cutout: '72%', animation: quiet ? false : { duration: 900, easing: 'easeOutQuart' }, plugins: { legend: { display: false }, tooltip: Object.assign({}, tip, { enabled: matchMedia('(hover: hover)').matches }) },
+      options: { cutout: '72%', maintainAspectRatio: false, animation: quiet ? false : { duration: 900, easing: 'easeOutQuart' }, plugins: { legend: { display: false }, tooltip: Object.assign({}, tip, { enabled: matchMedia('(hover: hover)').matches }) },
         onClick: (e, els) => { if (!els.length) return; const c = top[els[0].index]; if (!c) return; S.filtros = { q: '', tipo: 'Gasto', categoria: c.categoria, cuenta: '' }; S.view = 'movimientos'; render(); } }
     });
   }
